@@ -24,11 +24,9 @@ class SearchSpider(scrapy.Spider):
                     results = payload.get('product_features')
                     for result in results:
                         listing_id = result.get('id')
-                        upgrade_types = ['plus', 'premium']
-                        for upgrades in upgrade_types:
-                            upgrade_url = f'https://www.hemnet.se/betalning/{listing_id}/{upgrades}-uppgradering'
-                            yield scrapy.Request(url=upgrade_url,
-                                                 callback=self.parse_upgrade_pages)
+                        upgrade_url = f'https://www.hemnet.se/saljkollen/{listing_id}'
+                        yield scrapy.Request(url=upgrade_url,
+                                                callback=self.parse_upgrade_page)
                         listing_url = f'https://www.hemnet.se/bostad/{listing_id}'
                         yield scrapy.Request(url=listing_url,
                                              callback=self.parse_listing_page)
@@ -38,24 +36,31 @@ class SearchSpider(scrapy.Spider):
                         next_url = self.url_base + f'page={page_index + 1}'
                         yield response.follow(next_url, self.parse)
 
-    def parse_upgrade_pages(self, response):
-        for payload in response.css('div.js-checkout-klarna-react-root'):
-            details = json.loads(payload.attrib['data-initial-data'])
-            if details:
-                listing = details.get('listing')
-                listing_id = int(listing.get('id'))
-                offer = details.get('availableOffers')[0]
-                offer_name = offer.get('name')
-                offer_price = offer.get('price')
-                purchased_bool = int(details.get(
-                    'ineligiblePurchase') is not None)
-                yield {
-                    'listing_id': listing_id,
-                    'upgrade_product': offer_name,
-                    'upgrade_price': offer_price,
-                    'purchased_bool': purchased_bool,
-                    'data_type': 'upgrade_price'
-                }
+    def parse_upgrade_page(self, response):
+        dl_line = response.css('script').re_first(
+            r'dataLayer = \[{"page":{"type":"standard"}}.*?\].+')
+        if dl_line:
+            matched_str = re.findall(r'\[.*\]', dl_line)[0]
+            if matched_str:
+                payload = json.loads(matched_str)
+                if payload:
+                    property_detail = payload[1].get('property')
+                    listing_id = property_detail.get('id')
+                    listing_publication_date = property_detail.get('publication_date')
+                    for payload in response.css('div.js-sellers-page-react-root'):
+                        details = json.loads(payload.attrib['data-initial-data'])
+                        if details:
+                            raketen = details.get('toplistingOffering')
+                            plus = details.get('packageOfferings').get('plusOffering')
+                            premium = details.get('packageOfferings').get('premiumOffering')
+                            yield {
+                                'listing_id': listing_id,
+                                'publication_date' : listing_publication_date,
+                                'raketen': raketen,
+                                'plus': plus,
+                                'premium': premium,
+                                'data_type': 'upgrade_price'
+                            }
 
     def parse_listing_page(self, response):
         dl_line = response.css('script').re_first(

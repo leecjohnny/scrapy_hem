@@ -10,20 +10,17 @@ def read_items(filepath):
 
 def flatten_items(items):
     listings = list(filter(lambda l: l['data_type'] == 'listing', items))
-    plus_prices = list(filter(
-        lambda l: l['data_type'] == 'upgrade_price'
-        and l['upgrade_product'] == 'Hemnet Plus', items))
-    premium_prices = list(filter(
-        lambda l: l['data_type'] == 'upgrade_price'
-        and l['upgrade_product'] == 'Hemnet Premium', items))
+    upgrade_prices = list(filter(
+        lambda l: l['data_type'] == 'upgrade_price', items))
     for listing in listings:
         listing_id = listing.get('listing_id')
-        plus_dict = [
-            d for d in plus_prices if d['listing_id'] == listing_id][0]
-        premium_dict = [
-            d for d in premium_prices if d['listing_id'] == listing_id][0]
-        listing['plus_price'] = plus_dict.get('upgrade_price')
-        listing['premium_price'] = premium_dict.get('upgrade_price')
+        prices = [
+            d for d in upgrade_prices if d['listing_id'] == listing_id]
+        if prices:
+            listing['plus_price'] = prices[0].get('plus').get('price')
+            listing['premium_price'] = prices[0].get('premium').get('price')
+            listing['raketen_price'] = prices[0].get('raketen').get('price')
+            listing['publication_date'] = prices[0].get('publication_date')
     return listings
 
 
