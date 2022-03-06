@@ -13,5 +13,5 @@ curl -s --user $API_KEY \
     https://api.mailgun.net/v3/mg.johnnyclee.com/messages \
     -F from='Pi <pi@johnnyclee.com>' \
     -F to=$TO_EMAIL \
-    -F subject='[Scrapy Status] Complete' \
-    -F text='($wc -l $FILE_OUTPUT) listings retrieved.'
+    -F subject="[Scrapy Status] Complete $(date)" \
+    -F text="$(wc -l $FILE_OUTPUT)"
