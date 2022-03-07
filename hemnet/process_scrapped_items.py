@@ -1,6 +1,7 @@
 import json
 import csv
 import argparse
+import datetime
 
 
 def read_items(filepath):
@@ -21,6 +22,9 @@ def flatten_items(items):
             listing['premium_price'] = prices[0].get('premium').get('price')
             listing['raketen_price'] = prices[0].get('raketen').get('price')
             listing['publication_date'] = prices[0].get('publication_date')
+        listing['row_created_time_utc'] = datetime.datetime.utcnow().replace(
+            microsecond=0).isoformat()
+        listing.pop('data_type')
     return listings
 
 
