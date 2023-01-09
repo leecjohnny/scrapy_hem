@@ -19,7 +19,7 @@ class SearchSpider(scrapy.Spider):
         if dl_line:
             matched_str = re.findall(r'\[.*\]', dl_line)[0]
             if matched_str:
-                payload = json.loads(matched_str)[1].get('results')
+                payload = json.loads(matched_str)[2].get('results')
                 if payload:
                     results = payload.get('product_features')
                     for result in results:
@@ -44,7 +44,7 @@ class SearchSpider(scrapy.Spider):
             if matched_str:
                 payload = json.loads(matched_str)
                 if payload:
-                    property_detail = payload[1].get('property')
+                    property_detail = payload[2].get('property')
                     listing_id = property_detail.get('id')
                     listing_publication_date = property_detail.get('publication_date')
                     for payload in response.css('div.js-sellers-page-react-root'):
@@ -70,7 +70,7 @@ class SearchSpider(scrapy.Spider):
             if matched_str:
                 payload = json.loads(matched_str)
                 if payload:
-                    property_detail = payload[1].get('property')
+                    property_detail = payload[2].get('property')
                     listing_id = property_detail.get('id')
                     listing_package_type = property_detail.get(
                         'listing_package_type')

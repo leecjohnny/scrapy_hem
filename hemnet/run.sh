@@ -8,10 +8,3 @@ cd "$(dirname "$0")"
 source run.config
 scrapy crawl search -O $SCRAPY_OUPUT -L INFO --logfile $LOG_OUTPUT
 python3 process_scrapped_items.py $SCRAPY_OUPUT $FILE_OUTPUT
-
-curl -s --user $API_KEY \
-    https://api.mailgun.net/v3/mg.johnnyclee.com/messages \
-    -F from='Pi <pi@johnnyclee.com>' \
-    -F to=$TO_EMAIL \
-    -F subject="[Scrapy Status] Complete $(date)" \
-    -F text="$(wc -l $FILE_OUTPUT)"

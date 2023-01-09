@@ -1,0 +1,155 @@
+---
+title: "Hemnet Notebook"
+output: html_notebook
+---
+
+
+```{r setup}
+library(tidyverse)
+library(lubridate)
+setwd("/Users/johnny/Google Drive/My Drive/Git/scrapy_hem/hemnet/")
+d <- read_csv("data/hemnet_scapped.csv") %>%
+  mutate(
+    scrap_group = factor(if_else(scrap_date == 2023, ymd("20230109"), ymd("20220306"))),
+    pct_plus = plus_price / ask_price,
+    pct_prem = premium_price / ask_price)
+```
+
+```{r listings, eval=FALSE, include=FALSE}
+
+ask_price_bin_size <- 1000000
+
+d %>%
+  mutate(ask_price_group = case_when(
+    ask_price > 1e7 ~ (1e7 + ask_price_bin_size),
+    TRUE ~ ((ask_price %/% ask_price_bin_size + 1)*ask_price_bin_size ))
+    ) %>%
+  group_by(scrap_date,ask_price_group) %>%
+  tally() %>%
+  group_by(scrap_date) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup() %>%
+  ggplot(aes(x = ask_price_group, y = pct, fill = factor(scrap_date))) +
+  geom_col(position = "dodge") +
+  theme_classic()
+```
+
+```{r take_rates}
+d %>%
+  ggplot(aes(x = ask_price)) +
+  geom_point(aes(y = plus_price, color = "Plus")) + 
+  geom_point(aes(y = premium_price, color = "Premium")) +
+  scale_y_continuous(labels = scales::label_dollar(prefix = "", suffix= "kr"), expand = expand_scale(mult=c(0,0.1)), n.breaks = 8) +
+  scale_x_continuous(labels = scales::label_dollar(prefix = "", scale	= 1e-6), n.breaks = 7, expand = expand_scale(mult=c(0,0)), limits = c(0,30*1e6)) +
+  scale_color_manual(values = c("grey", "darkblue")) +
+  facet_grid(cols = vars(factor(scrap_group))) +
+  theme_linedraw() +
+  theme(panel.spacing = unit(1, "lines")) + 
+  labs(
+    x = "SEK in millions, ask price",
+    y = "SEK, listing price by type",
+    color = "Listing type",
+    title = "Hemnet listing upsell pricing dramatically increased in last 12 months",
+    subtitle = "Date of listing data"
+  )
+```
+
+```{r take_rates_pct, warning=FALSE}
+
+pct_medians <- d %>%
+  group_by(scrap_date) %>%
+  summarise(
+    med_pct_plus = median(pct_plus),
+    med_pct_prem = median(pct_prem)
+  ) 
+  
+median_2022 <- pct_medians %>% filter(scrap_date == 2022) %>% pull(med_pct_plus)
+median_2023 <- pct_medians %>% filter(scrap_date == 2023) %>% pull(med_pct_plus)
+d  %>%
+  ggplot(aes(x = pct_plus, fill = factor(scrap_group))) +
+  geom_histogram(
+    aes(y = (..count..) / sum(..count..)),
+    binwidth = .00005,
+    alpha = 0.5,
+    position = "identity"
+  ) +
+  geom_vline(xintercept = median_2022, color = "grey") +
+  geom_text(aes(
+    x = median_2022,
+    y = 0.1,
+    label = paste0(
+      "\n2022 Median\n(",
+      scales::percent(median_2022, accuracy = .01),
+      ")"
+    )
+  ), colour = "black", angle = 90, nudge_x = .00005) +
+  geom_vline(xintercept = median_2023, color = "blue") +
+  geom_text(aes(
+    x = median_2023,
+    y = 0.1,
+    label = paste0(
+      "\n2023 Median\n(",
+      scales::percent(median_2023, accuracy = .01),
+      ")"
+    )
+  ), colour = "blue", angle = 90, nudge_x = .00005) +
+  scale_fill_manual(values = c("grey", "blue")) +
+  scale_x_continuous(limits = c(0, 0.0015), expand = expand_scale(mult =
+                                                                    c(0, 0)), labels = scales::percent) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, .2)), labels = scales::percent) +
+  theme_classic() +
+  labs(
+    x = "%, take rate (from ask price)",
+    y = "%, listings",
+    color = "Year",
+    title = "Plus listing take rates increased ~50%",
+    fill = "Date"
+  )
+```
+
+```{r take_rates_pct_prem, warning=FALSE}
+median_2022 <- pct_medians %>% filter(scrap_date == 2022) %>% pull(med_pct_prem)
+median_2023 <-
+  pct_medians %>% filter(scrap_date == 2023) %>% pull(med_pct_prem)
+
+d  %>%
+  ggplot(aes(x = pct_prem, fill = factor(scrap_group))) +
+  geom_histogram(
+    aes(y = (..count..) / sum(..count..)),
+    binwidth = .00005,
+    alpha = 0.5,
+    position = "identity"
+  ) +
+  geom_vline(xintercept = median_2022, color = "grey") +
+  geom_text(aes(
+    x = median_2022,
+    y = 0.03,
+    label = paste0("\n2022 Median\n(", scales::percent(median_2022, accuracy = .01), ")")),
+    colour = "black",
+    angle = 90, nudge_x = .00005
+  ) +
+  geom_vline(xintercept = median_2023, color = "blue") +
+  geom_text(
+    aes(
+      x = median_2023,
+      y = 0.03,
+      label = paste0("\n2023 Median\n(", scales::percent(median_2023, accuracy = .01), ")")),
+    colour = "blue",
+    angle = 90, nudge_x = .00005
+  ) +
+  scale_fill_manual(values = c("grey", "blue")) +
+  scale_x_continuous(
+    limits = c(0, 0.004),
+    expand = expand_scale(mult = c(0, 0)),
+    labels = scales::percent
+  ) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, .2)), labels = scales::percent) +
+  theme_classic() +
+  labs(
+    x = "%, take rate (from ask price)",
+    y = "%, listings",
+    color = "Year",
+    title = "Premium listing take rates increased ~50%",
+    fill = "Date"
+  )
+```
